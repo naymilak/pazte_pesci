@@ -1,0 +1,4 @@
+datum:		6.5.2024
+cas:		22:23 h
+kraj:		Maribor
+dolzina:	4:12
