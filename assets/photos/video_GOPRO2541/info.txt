@@ -1,0 +1,4 @@
+datum:		5.4.2024
+cas:		18:45 h
+kraj:		Ljutomer
+dolzina:	2:52
