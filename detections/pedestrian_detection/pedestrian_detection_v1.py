@@ -34,6 +34,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from danger_detection_v1 import danger_detection
 
 import torch
 
@@ -65,6 +66,20 @@ from utils.general import (
 )
 from utils.torch_utils import select_device, smart_inference_mode
 
+def resize_coordinates(det, original_width, original_height, target_width=1280, target_height=720):
+    """
+    Resize the coordinates in det to be compatible with an image size of target_width x target_height.
+    """
+    width_ratio = target_width / original_width
+    height_ratio = target_height / original_height
+    for i, box in enumerate(det):
+        # Scale the coordinates
+        det[i][0] *= width_ratio   # x1
+        det[i][1] *= height_ratio   # y1
+        det[i][2] *= width_ratio  # x2
+        det[i][3] *= height_ratio # y2
+    return det
+
 
 @smart_inference_mode()
 def run(
@@ -91,7 +106,7 @@ def run(
     name="exp",  # save results to project/name
     exist_ok=False,  # existing project/name ok, do not increment
     line_thickness=3,  # bounding box thickness (pixels)
-    hide_labels=True,  # hide labels
+    hide_labels=False,  # hide labels
     hide_conf=False,  # hide confidences
     half=False,  # use FP16 half-precision inference
     dnn=False,  # use OpenCV DNN for ONNX inference
@@ -175,7 +190,7 @@ def run(
                     writer.writeheader()
                 writer.writerow(data)
 
-        # Process predictions
+       # Process predictions
         for i, det in enumerate(pred):  # per image
             seen += 1
             if webcam:  # batch_size >= 1
@@ -192,18 +207,26 @@ def run(
             imc = im0.copy() if save_crop else im0  # for save_crop
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
             if len(det):
+
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
 
-                # Print results
+                original_width = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                original_height = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                det = resize_coordinates(det, original_width, original_height)
+
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                # Write results
+                danger_text = "PAZI PESEC!" if danger_detection(det[:, :4] * 1.12) else "Ni nevarnosti"
+                cv2.putText(im0, danger_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+               
+                # Write results and print coordinates
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)  # integer class
-                    label = None if hide_labels else (names[c] if hide_conf else f"{names[c]} {conf:.2f}")
+                    label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
 
@@ -216,12 +239,17 @@ def run(
                         with open(f"{txt_path}.txt", "a") as f:
                             f.write(("%g " * len(line)).rstrip() % line + "\n")
 
+                    # Print [x1, y1, x2, y2] coordinates to the terminal
+                    x1, y1, x2, y2 = [int(coord) for coord in xyxy]
+                    print(f"Image: {p.name}, Class: {label}, Confidence: {confidence:.2f}, Coordinates: [{x1}, {y1}, {x2}, {y2}]")
+
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f"{names[c]} {conf:.2f}")
                         annotator.box_label(xyxy, label, color=colors(c, True))
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / "crops" / names[c] / f"{p.stem}.jpg", BGR=True)
+
 
             # Stream results
             im0 = annotator.result()
