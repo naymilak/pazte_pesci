@@ -219,8 +219,16 @@ def run(
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
+                            # Modified part for setting danger text color and position
                 danger_text = "PAZI PESEC!" if danger_detection(det[:, :4] * 1.12) else "Ni nevarnosti"
-                cv2.putText(im0, danger_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+                color = (0, 0, 255) if danger_text == "PAZI PESEC!" else (0, 255, 0)  # Red for danger, green for no danger
+
+                # Calculate the position to center the text at the top
+                text_size = cv2.getTextSize(danger_text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
+                text_x = (im0.shape[1] - text_size[0]) // 2
+                text_y = 50  # Adjust as needed to move the text lower or higher
+
+                cv2.putText(im0, danger_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
 
                
                 # Write results and print coordinates
