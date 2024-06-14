@@ -1,6 +1,25 @@
-# pazte_pesci
+# PAZTE PESCI
 
-[PREDSTAVITEV PROJEKTA]...
+---
+## Uporaba
 
-### PRAVILA
-V vsakem direktoriju bo README.md file, v katerem je opis vsebine direktorija in pravila/ primeri, kako poimenovati nove direktorije
+1) Korak
+![img_name](path/to/img.png)
+
+2) Korak
+![img_name](path/to/img.png)
+
+3) Korak
+![img_name](path/to/img.png)
+
+4) Korak
+![img_name](path/to/img.png)
+
+...
+
+## Demo
+
+Ogled demo videoposnetkov:
+1. video -> [name](https://www.example.com)
+2. video -> [name](https://www.example.com)
+3. video -> [name](https://www.example.com)
