@@ -1,4 +1,4 @@
-# Vključitev potrebnih knjižnic
+
 import paho.mqtt.client as mqtt
 import cv2
 import numpy as np
