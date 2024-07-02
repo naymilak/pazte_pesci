@@ -1,0 +1,70 @@
+# Vključitev potrebnih knjižnic
+import paho.mqtt.client as mqtt
+import time
+from datetime import datetime
+from prometheus_client import start_http_server, Counter
+import cv2
+
+# Prometheus metrics
+# More: https://github.com/prometheus/client_python
+#       https://prometheus.github.io/client_python/instrumenting/counter/
+# Tudi: Gauge
+counter_sending = Counter('sending_counter', 'Number of messages send')
+
+# IP naslov MQTT Broker-ja (Mosquitto MQTT)
+broker = "10.8.13.2"
+
+# Port MQTT Broker-ja (Mosquitto MQTT)
+port = 1883
+
+# Ime topica - vrste
+topic = "/data"
+
+def on_connect(client, userdata, flags, reasonCode, properties=None):
+  print("Povezava z MQTT: " + str(reasonCode))
+
+# Nastavitev MQTT klienta
+producer = mqtt.Client(client_id="producer_1", callback_api_version=mqtt.CallbackAPIVersion.VERSION2)   
+
+# Povezava na MQTT broker
+producer.connect(broker, port, 60)
+
+# Callback funkcije
+producer.on_connect = on_connect # Ob vzpostavitvi povezave na MQTT broker
+
+# Prometheus metrics server
+start_http_server(8000)
+
+video_path = 'GOPR2541.MP4'
+cap = cv2.VideoCapture(video_path)
+frame_rate = 30
+
+if not cap.isOpened():
+    print("Error: Cannot open video.")
+    exit()
+
+frame_count = 0
+
+# Neskončna zanka za pošiljanje sporočil
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("End of video stream or error reading frame.")
+        break
+
+    frame_count += 1
+
+    # Only send every nth frame
+    if frame_count % frame_rate == 0:
+        _, buffer = cv2.imencode('.jpg', frame)
+        message = buffer.tobytes()
+
+        ret = producer.publish(topic, message, qos=1, retain=False)
+        print("Sending frame: " + str(ret.rc))
+
+        # Prometheus metrics
+        counter_sending.inc(1)
+
+    time.sleep(1 / frame_rate)  # Adjust sleep time based on frame rate
+
+cap.release()
